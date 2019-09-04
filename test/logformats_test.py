@@ -142,6 +142,7 @@ class ReaderWriterTest(unittest.TestCase, ComparingMessagesTestCase, metaclass=A
         writer = self.writer_constructor(self.test_file_name)
         self._write_all(writer)
         self._ensure_fsync(writer)
+
         writer.stop()
         if hasattr(writer.file, "closed"):
             self.assertTrue(writer.file.closed)
@@ -410,6 +411,28 @@ class TestCsvFileFormat(ReaderWriterTest):
             preserves_channel=False,
             adds_default_channel=None,
         )
+
+
+try:
+    from can import MF4Writer, MF4Reader
+except ImportError:
+    # seems to unsupported on this platform
+    # see GitHub issue #696: MF4 does not run on PyPy
+    pass
+else:
+
+    class TestMF4FileFormat(ReaderWriterTest):
+        """Tests can.MF4Writer and can.MF4Reader"""
+
+        def _setup_instance(self):
+            super()._setup_instance_helper(
+                MF4Writer,
+                MF4Reader,
+                binary_file=True,
+                check_comments=False,
+                preserves_channel=False,
+                adds_default_channel=0,
+            )
 
 
 class TestSqliteDatabaseFormat(ReaderWriterTest):

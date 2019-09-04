@@ -16,12 +16,9 @@ python:
   # PyPy:
   - pypy3
 
-env:
-
-
 install:
   - if [[ "$TEST_SOCKETCAN" ]]; then sudo bash test/open_vcan.sh ; fi
-  - travis_retry pip install .[test]
+  - travis_retry pip install .[test,mf4]
 
 script:
   - |
@@ -74,6 +71,7 @@ jobs:
         #   -a Write all files
         #   -n nitpicky
         - python -m sphinx -an doc build
+
     - stage: linter
       name: "Linter Checks"
       python: "3.7"
@@ -109,6 +107,7 @@ jobs:
         - travis_retry pip install -r requirements-lint.txt
       script:
         - black --check --verbose .
+
     - stage: deploy
       name: "PyPi Deployment"
       python: "3.7"
