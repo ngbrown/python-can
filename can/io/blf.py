@@ -158,6 +158,11 @@ class BLFReader(BaseIOHandler):
         # Read rest of header
         self.file.read(header[1] - FILE_HEADER_STRUCT.size)
 
+
+    def __len__(self):
+        return self.object_count
+
+
     def __iter__(self):
         tail = b""
         while True:
