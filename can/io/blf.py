@@ -30,7 +30,10 @@ from .generic import BaseIOHandler
 
 class BLFParseError(Exception):
     """BLF file could not be parsed correctly."""
-    pass
+
+    def __init__(self, offset, message=None):
+        super().__init__(message if message is not None else f"BLF file could not be parsed correctly at {offset}")
+        self.offset = offset
 
 LOG = logging.getLogger(__name__)
 
@@ -146,7 +149,7 @@ class BLFReader(BaseIOHandler):
         data = self.file.read(FILE_HEADER_STRUCT.size)
         header = FILE_HEADER_STRUCT.unpack(data)
         if header[0] != b"LOGG":
-            raise BLFParseError("Unexpected file format")
+            raise BLFParseError(self.file.tell(), "Unexpected file format")
         self.file_size = header[10]
         self.uncompressed_size = header[11]
         self.object_count = header[12]
@@ -165,9 +168,10 @@ class BLFReader(BaseIOHandler):
 
             header = OBJ_HEADER_BASE_STRUCT.unpack(data)
             if header[0] != b"LOBJ":
-                raise BLFParseError()
+                raise BLFParseError(self.file.tell())
             obj_type = header[4]
             obj_data_size = header[3] - OBJ_HEADER_BASE_STRUCT.size
+            file_obj_data_pos = self.file.tell()
             obj_data = self.file.read(obj_data_size)
             # Read padding bytes
             self.file.read(obj_data_size % 4)
@@ -192,7 +196,7 @@ class BLFReader(BaseIOHandler):
                     header = OBJ_HEADER_BASE_STRUCT.unpack_from(data, pos)
                     #print(header)
                     if header[0] != b"LOBJ":
-                        raise BLFParseError()
+                        raise BLFParseError(file_obj_data_pos, f"BLF file could not be parsed correctly at {file_obj_data_pos}, offset into container {pos}")
 
                     obj_size = header[3]
                     # Calculate position of next object
