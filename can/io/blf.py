@@ -177,17 +177,24 @@ class BLFReader(BaseIOHandler):
             obj_type = header[4]
             obj_data_size = header[3] - OBJ_HEADER_BASE_STRUCT.size
             file_obj_data_pos = self.file.tell()
-            obj_data = self.file.read(obj_data_size)
-            # Read padding bytes
-            self.file.read(obj_data_size % 4)
 
             if obj_type == LOG_CONTAINER:
-                method, uncompressed_size = LOG_CONTAINER_STRUCT.unpack_from(
-                    obj_data)
-                container_data = obj_data[LOG_CONTAINER_STRUCT.size:]
+                data = self.file.read(LOG_CONTAINER_STRUCT.size)
+                method, uncompressed_size = LOG_CONTAINER_STRUCT.unpack_from(data)
+
                 if method == NO_COMPRESSION:
-                    data = container_data
+                    LOG.warning("No compression used")
+                    if self.file_size > 2147483648 and file_obj_data_pos == 160:
+                        # work around bug in large uncompressed files, read to the end.
+                        data = self.file.read(-1)
+                    else:
+                        data = self.file.read(obj_data_size - LOG_CONTAINER_STRUCT.size)
+                        # Read padding bytes
+                        self.file.read(obj_data_size % 4)
                 elif method == ZLIB_DEFLATE:
+                    container_data = self.file.read(obj_data_size - LOG_CONTAINER_STRUCT.size)
+                    # Read padding bytes
+                    self.file.read(obj_data_size % 4)
                     data = zlib.decompress(container_data, 15, uncompressed_size)
                 else:
                     # Unknown compression method
@@ -300,6 +307,8 @@ class BLFReader(BaseIOHandler):
 
                 # save the remaining data that could not be processed
                 tail = data[pos:]
+            else:
+                self.file.seek(file_obj_data_pos + obj_data_size + obj_data_size % 4)
 
         self.stop()
 
